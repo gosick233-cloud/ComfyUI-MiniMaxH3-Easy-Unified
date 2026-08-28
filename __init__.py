@@ -1,6 +1,6 @@
 from importlib import import_module
 
-from .nodes import MiniMaxH3AutoUnload, MiniMaxH3Easy, MiniMaxH3EasyLoader, MiniMaxH3EasyOutput, MiniMaxH3EasySecondPassConditioning, MiniMaxH3SecondPassSwitch
+from .nodes import MiniMaxH3AutoUnload, MiniMaxH3ConditionalSaveVideo, MiniMaxH3Easy, MiniMaxH3EasyLoader, MiniMaxH3EasyOutput, MiniMaxH3EasySecondPassConditioning, MiniMaxH3SecondPassSwitch
 from .prompt_writer import (
     NODE_CLASS_MAPPINGS as PROMPT_WRITER_CLASS_MAPPINGS,
     NODE_DISPLAY_NAME_MAPPINGS as PROMPT_WRITER_DISPLAY_NAME_MAPPINGS,
@@ -13,6 +13,7 @@ NODE_CLASS_MAPPINGS = {
     "gosick_233_MiniMaxH3AutoUnload": MiniMaxH3AutoUnload,
     "gosick_233_MiniMaxH3EasySecondPassConditioning": MiniMaxH3EasySecondPassConditioning,
     "gosick_233_MiniMaxH3SecondPassSwitch": MiniMaxH3SecondPassSwitch,
+    "gosick_233_MiniMaxH3ConditionalSaveVideo": MiniMaxH3ConditionalSaveVideo,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -22,6 +23,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "gosick_233_MiniMaxH3AutoUnload": "gosick_233 · MiniMax H3 Auto Unload",
     "gosick_233_MiniMaxH3EasySecondPassConditioning": "gosick_233 · MiniMax H3 Easy Second Pass Conditioning",
     "gosick_233_MiniMaxH3SecondPassSwitch": "gosick_233 · 二采开关（关闭时跳过二采）",
+    "gosick_233_MiniMaxH3ConditionalSaveVideo": "gosick_233 · 二采条件保存",
 }
 
 _prompt_overlap = set(NODE_CLASS_MAPPINGS).intersection(PROMPT_WRITER_CLASS_MAPPINGS)

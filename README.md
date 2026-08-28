@@ -310,6 +310,15 @@ blocks in `minimax_refs`, text conditioning, token tags, frame indexes, and othe
 metadata are preserved. This prevents the keyframe row-count mismatch that
 occurs when first-pass keyframe latents are reused at a different resolution.
 
+### Second-pass switch and conditional save
+
+**Second Pass Switch** lazily evaluates only the selected video branch and
+also outputs its enabled state. Connect that state to **Second Pass Conditional
+Save**. With second pass disabled, the first-pass video is still saved by its
+normal Save Video node while the conditional saver performs no file write.
+With second pass enabled, the conditional saver uses ComfyUI's native video
+save implementation for the refined result.
+
 ## Pass 2 workflow
 
 [`MiniMax_H3_Easy_Pass2.json`](workflow/MiniMax_H3_Easy_Pass2.json) is the

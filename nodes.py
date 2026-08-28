@@ -24,6 +24,8 @@ import comfy.model_management
 import folder_paths
 import node_helpers
 import nodes
+from comfy_api.latest import Types, io
+from comfy_extras.nodes_video import SaveVideo
 from comfy_extras import nodes_minimax_h3 as h3
 
 
@@ -863,8 +865,8 @@ class MiniMaxH3Easy:
 class MiniMaxH3SecondPassSwitch:
     CATEGORY = "gosick_233/MiniMax H3 Easy"
     FUNCTION = "select"
-    RETURN_TYPES = ("VIDEO",)
-    RETURN_NAMES = ("video",)
+    RETURN_TYPES = ("VIDEO", "BOOLEAN")
+    RETURN_NAMES = ("video", "二采已开启")
     DESCRIPTION = "Lazy second-pass switch. When disabled, the whole second-pass branch is skipped and the first-pass video is forwarded."
 
     @classmethod
@@ -888,7 +890,58 @@ class MiniMaxH3SecondPassSwitch:
         if selected is None:
             branch = "二采视频" if 开启二采 else "一采视频"
             raise ValueError(f"二采开关选中的输入未连接：{branch}")
-        return (selected,)
+        return (selected, bool(开启二采))
+
+
+class MiniMaxH3ConditionalSaveVideo(io.ComfyNode):
+    """Save the selected second-pass video only while second pass is enabled."""
+
+    @classmethod
+    def define_schema(cls):
+        return io.Schema(
+            node_id="gosick_233_MiniMaxH3ConditionalSaveVideo",
+            display_name="gosick_233 · 二采条件保存",
+            category="gosick_233/MiniMax H3 Easy",
+            description="开启二采时保存二采视频；关闭时不重复保存一采视频。",
+            inputs=[
+                io.Video.Input("video", tooltip="连接二采开关选择后的视频。"),
+                io.Boolean.Input("开启保存二采", default=True),
+                io.String.Input("filename_prefix", default="video/ComfyUI"),
+                io.Combo.Input("format", options=Types.VideoContainer.as_input(), default="auto"),
+                io.DynamicCombo.Input(
+                    "codec",
+                    options=[
+                        io.DynamicCombo.Option("auto", []),
+                        io.DynamicCombo.Option(
+                            "h264",
+                            [
+                                io.DynamicCombo.Input(
+                                    "encoding",
+                                    display_name="encoding mode",
+                                    options=[
+                                        io.DynamicCombo.Option("auto", []),
+                                        io.DynamicCombo.Option(
+                                            "re-encode",
+                                            [io.Float.Input("crf", default=23.0, min=0.0, max=51.0, step=1.0)],
+                                        ),
+                                    ],
+                                    optional=True,
+                                ),
+                            ],
+                        ),
+                    ],
+                ),
+            ],
+            hidden=[io.Hidden.prompt, io.Hidden.extra_pnginfo],
+            is_output_node=True,
+            outputs=[io.Video.Output("video")],
+        )
+
+    @classmethod
+    def execute(cls, video, 开启保存二采, filename_prefix, format, codec):
+        if not 开启保存二采:
+            return io.NodeOutput(video)
+        return SaveVideo.execute.__func__(cls, video, filename_prefix, format, codec)
 
 
 class MiniMaxH3AutoUnload:

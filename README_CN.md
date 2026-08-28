@@ -12,6 +12,10 @@
 以便与两个原版节点包共存，避免重复注册。YCNodes 衍生部分的原始说明保留在
 [README-YCNodes.md](README-YCNodes.md)。
 
+改版 Easy 界面使用的 AI 提示词与多分镜后端已经合并在本仓库内。API 设置保存在
+本地 `prompt_optimizer.json` 中。由于该文件会以明文保存 API Key，因此被 Git
+明确排除，不会上传。只要更新节点时保留这个本地文件，就不需要反复重新输入 API。
+
 [English README](README.md)
 
 `ComfyUI-MiniMaxH3-Easy` 为 MiniMax H3 提供一套紧凑的 ComfyUI 工作流入口，整合

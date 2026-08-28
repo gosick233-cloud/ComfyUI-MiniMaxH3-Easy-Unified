@@ -14,6 +14,13 @@ with the original packages without duplicate node registrations. For the
 original documentation of the YCNodes-derived modules, see
 [README-YCNodes.md](README-YCNodes.md).
 
+The AI prompt-writer and storyboard backend used by the modified Easy UI is
+included in this repository. API settings are stored locally in
+`prompt_optimizer.json`. That file is intentionally excluded from Git because
+it contains API keys in plain text. Entering or saving settings in the UI
+creates or updates the local file; updating this repository does not require
+re-entering the settings as long as that local file is retained.
+
 [中文说明 / Chinese documentation](README_CN.md)
 
 `ComfyUI-MiniMaxH3-Easy` provides a compact MiniMax H3 workflow surface for

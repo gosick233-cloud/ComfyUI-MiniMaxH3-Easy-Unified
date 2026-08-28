@@ -1,6 +1,10 @@
 from importlib import import_module
 
 from .nodes import MiniMaxH3AutoUnload, MiniMaxH3Easy, MiniMaxH3EasyLoader, MiniMaxH3EasyOutput, MiniMaxH3EasySecondPassConditioning, MiniMaxH3SecondPassSwitch
+from .prompt_writer import (
+    NODE_CLASS_MAPPINGS as PROMPT_WRITER_CLASS_MAPPINGS,
+    NODE_DISPLAY_NAME_MAPPINGS as PROMPT_WRITER_DISPLAY_NAME_MAPPINGS,
+)
 
 NODE_CLASS_MAPPINGS = {
     "gosick_233_MiniMaxH3EasyLoader": MiniMaxH3EasyLoader,
@@ -20,6 +24,12 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "gosick_233_MiniMaxH3SecondPassSwitch": "gosick_233 · 二采开关（关闭时跳过二采）",
 }
 
+_prompt_overlap = set(NODE_CLASS_MAPPINGS).intersection(PROMPT_WRITER_CLASS_MAPPINGS)
+if _prompt_overlap:
+    raise RuntimeError(f"gosick_233 duplicate prompt-writer registration: {sorted(_prompt_overlap)}")
+NODE_CLASS_MAPPINGS.update(PROMPT_WRITER_CLASS_MAPPINGS)
+NODE_DISPLAY_NAME_MAPPINGS.update(PROMPT_WRITER_DISPLAY_NAME_MAPPINGS)
+
 for _module_name in (
     "minimax_i2v_tail",
     "h3_prompt_relay",
@@ -35,7 +45,8 @@ for _module_name in (
     NODE_CLASS_MAPPINGS.update(_module.NODE_CLASS_MAPPINGS)
     NODE_DISPLAY_NAME_MAPPINGS.update(_module.NODE_DISPLAY_NAME_MAPPINGS)
 
-del _module_name, _module, _overlap
+del _module_name, _module, _overlap, _prompt_overlap
+del PROMPT_WRITER_CLASS_MAPPINGS, PROMPT_WRITER_DISPLAY_NAME_MAPPINGS
 
 WEB_DIRECTORY = "./web"
 

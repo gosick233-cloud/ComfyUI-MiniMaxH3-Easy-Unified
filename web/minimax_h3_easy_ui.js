@@ -264,6 +264,7 @@ function localizeComboWidget(widget) {
     widget.options ||= {};
     widget.options.values = Object.values(definition);
     widget.value = definition[current] ?? widget.value;
+    widget.serializeValue = () => canonicalOption(name, widget.value);
 }
 
 function setLocalizedSlotLabel(slot, label) {
@@ -4736,6 +4737,31 @@ function setConfiguredWidgetValue(node, name, value) {
     if (widget._state) widget._state.value = value;
 }
 
+function canonicalizeSerializedWidgetValues(info) {
+    const optionIndexes = {
+        mode: 0,
+        resolution: 2,
+        aspect_ratio: 3,
+        keyframe_role: 9,
+        ref_image_size: 10,
+        reference_mention_mode: 11,
+    };
+    if (Array.isArray(info?.widgets_values)) {
+        for (const [name, index] of Object.entries(optionIndexes)) {
+            if (index < info.widgets_values.length) {
+                info.widgets_values[index] = canonicalOption(name, info.widgets_values[index]);
+            }
+        }
+    }
+    if (info?.widgets_values_named && typeof info.widgets_values_named === "object") {
+        for (const name of Object.keys(optionIndexes)) {
+            if (Object.prototype.hasOwnProperty.call(info.widgets_values_named, name)) {
+                info.widgets_values_named[name] = canonicalOption(name, info.widgets_values_named[name]);
+            }
+        }
+    }
+}
+
 function repairConfiguredWidgetValues(node, info) {
     const raw = Array.isArray(info?.widgets_values) ? [...info.widgets_values] : [];
     if (!raw.length) return;
@@ -4897,6 +4923,7 @@ function installNode(nodeType, nodeData) {
     nodeType.prototype.onSerialize = function onSerializeH3Easy(info) {
         if (this.__h3Editor) syncPromptFromEditor(this, false);
         const result = originalSerialize?.apply(this, arguments);
+        canonicalizeSerializedWidgetValues(info);
         if (info && this.properties?.[PROMPT_DOC_PROP]) {
             info.properties ||= {};
             info.properties[PROMPT_DOC_PROP] = this.properties[PROMPT_DOC_PROP];

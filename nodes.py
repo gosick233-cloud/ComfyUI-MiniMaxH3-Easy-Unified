@@ -33,12 +33,32 @@ MODE_FL2VA = "fl2va"
 MODE_L2VA = "l2va"
 MODE_REFERENCE = "ref2va"
 MODE_CHOICES = (MODE_T2VA, MODE_I2VA, MODE_FL2VA, MODE_L2VA, MODE_REFERENCE)
+MODE_INPUT_CHOICES = (
+    *MODE_CHOICES,
+    "T2VA（文生视频）", "I2VA（首帧生视频）", "I2VA（图生视频）",
+    "FL2VA（首尾帧生视频）", "L2VA（尾帧生视频）", "Ref2VA（参考生视频）",
+    "T2VA (Text-to-video)", "I2VA (First-frame-to-video)",
+    "FL2VA (First/last-frame video)", "L2VA (Last-frame-to-video)",
+    "Ref2VA (Reference-to-video)",
+)
 KEYFRAME_FIRST = "first"
 KEYFRAME_LAST = "last"
+KEYFRAME_INPUT_CHOICES = (
+    KEYFRAME_FIRST, KEYFRAME_LAST,
+    "首帧优先", "尾帧优先", "First frame priority", "Last frame priority",
+)
 REF_IMAGE_1K = "1k"
 REF_IMAGE_2K = "2k"
+REF_IMAGE_SIZE_INPUT_CHOICES = (
+    REF_IMAGE_1K, REF_IMAGE_2K,
+    "短边最大1K像素", "短边最大2K像素", "Max 1K Short Edge", "Max 2K Short Edge",
+)
 REFERENCE_MENTION_FILENAME = "filename"
 REFERENCE_MENTION_INDEX = "index"
+REFERENCE_MENTION_INPUT_CHOICES = (
+    REFERENCE_MENTION_FILENAME, REFERENCE_MENTION_INDEX,
+    "按文件名", "按序号", "By filename", "By index",
+)
 NONE_MODEL = "无"
 NONE_MODEL_ALIASES = {"none", "无"}
 RESOLUTION_360 = "360P"
@@ -697,7 +717,7 @@ class MiniMaxH3Easy:
         return {
             "required": {
                 "h3_bundle": ("MINIMAX_H3_BUNDLE",),
-                "mode": (list(MODE_CHOICES), {"default": MODE_T2VA}),
+                "mode": (list(MODE_INPUT_CHOICES), {"default": MODE_T2VA}),
                 "prompt": ("STRING", {"multiline": True, "dynamicPrompts": True, "default": ""}),
                 "resolution": (list(RESOLUTIONS), {"default": RESOLUTION_480}),
                 "aspect_ratio": (list(ASPECT_RATIOS), {"default": ASPECT_WIDESCREEN}),
@@ -706,9 +726,9 @@ class MiniMaxH3Easy:
                 "seconds": ("FLOAT", {"default": 5.0, "min": MIN_SECONDS, "max": MAX_SECONDS, "step": 1.0}),
                 "advanced": ("BOOLEAN", {"default": False}),
                 "fps": ("FLOAT", {"default": 24.0, "min": 1.0, "max": 120.0, "step": 1.0}),
-                "keyframe_role": ([KEYFRAME_FIRST, KEYFRAME_LAST], {"default": KEYFRAME_FIRST}),
-                "ref_image_size": ([REF_IMAGE_1K, REF_IMAGE_2K], {"default": REF_IMAGE_1K}),
-                "reference_mention_mode": ([REFERENCE_MENTION_FILENAME, REFERENCE_MENTION_INDEX], {"default": REFERENCE_MENTION_INDEX}),
+                "keyframe_role": (list(KEYFRAME_INPUT_CHOICES), {"default": KEYFRAME_FIRST}),
+                "ref_image_size": (list(REF_IMAGE_SIZE_INPUT_CHOICES), {"default": REF_IMAGE_1K}),
+                "reference_mention_mode": (list(REFERENCE_MENTION_INPUT_CHOICES), {"default": REFERENCE_MENTION_INDEX}),
             },
             "optional": optional,
         }
@@ -754,7 +774,21 @@ class MiniMaxH3Easy:
         if not isinstance(h3_bundle, MiniMaxH3Bundle):
             raise ValueError("Connect a MiniMax H3 Easy Loader bundle")
         raw_mode = str(mode).strip()
-        keyframe_role = KEYFRAME_LAST if str(keyframe_role) == KEYFRAME_LAST else KEYFRAME_FIRST
+        keyframe_role = {
+            KEYFRAME_LAST: KEYFRAME_LAST,
+            "尾帧优先": KEYFRAME_LAST,
+            "Last frame priority": KEYFRAME_LAST,
+        }.get(str(keyframe_role).strip(), KEYFRAME_FIRST)
+        ref_image_size = {
+            REF_IMAGE_2K: REF_IMAGE_2K,
+            "短边最大2K像素": REF_IMAGE_2K,
+            "Max 2K Short Edge": REF_IMAGE_2K,
+        }.get(str(ref_image_size).strip(), REF_IMAGE_1K)
+        reference_mention_mode = {
+            REFERENCE_MENTION_FILENAME: REFERENCE_MENTION_FILENAME,
+            "按文件名": REFERENCE_MENTION_FILENAME,
+            "By filename": REFERENCE_MENTION_FILENAME,
+        }.get(str(reference_mention_mode).strip(), REFERENCE_MENTION_INDEX)
         width, height = _canvas_dimensions(resolution, aspect_ratio, width, height)
         seconds = min(MAX_SECONDS, max(MIN_SECONDS, float(seconds)))
         length = _frame_length(seconds, fps)
@@ -770,6 +804,11 @@ class MiniMaxH3Easy:
             "FL2VA（首尾帧生视频）": MODE_FL2VA,
             "L2VA（尾帧生视频）": MODE_L2VA,
             "Ref2VA（参考生视频）": MODE_REFERENCE,
+            "T2VA (Text-to-video)": MODE_T2VA,
+            "I2VA (First-frame-to-video)": MODE_I2VA,
+            "FL2VA (First/last-frame video)": MODE_FL2VA,
+            "L2VA (Last-frame-to-video)": MODE_L2VA,
+            "Ref2VA (Reference-to-video)": MODE_REFERENCE,
         }
         mode = mode_aliases.get(raw_mode, raw_mode.lower())
         if mode not in MODE_CHOICES:

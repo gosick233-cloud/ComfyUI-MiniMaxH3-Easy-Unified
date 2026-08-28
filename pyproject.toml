@@ -1,0 +1,16 @@
+[project]
+name = "gosick-233-minimax-h3-nodes"
+description = "Namespaced community modifications combining MiniMaxH3-Easy and YCNodes MiniMax H3."
+version = "1.0.13"
+license = { file = "LICENSE" }
+dependencies = ["requests"]
+
+[project.urls]
+Repository = "https://github.com/gosick233-cloud/ComfyUI-MiniMaxH3-Easy-Unified"
+Documentation = "https://github.com/gosick233-cloud/ComfyUI-MiniMaxH3-Easy-Unified#readme"
+"Bug Tracker" = "https://github.com/gosick233-cloud/ComfyUI-MiniMaxH3-Easy-Unified/issues"
+
+[tool.comfy]
+PublisherId = "gosick_233"
+DisplayName = "gosick_233"
+Icon = ""

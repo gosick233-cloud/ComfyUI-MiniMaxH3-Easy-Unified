@@ -2,8 +2,7 @@
 
 [English](README.md)
 
-这是作者为自己的 MiniMax H3 工作流整理的命名空间隔离改版，不是两个上游项目的
-官方版本。
+这是作者为自己的 MiniMax H3 工作流整理的命名空间隔离改版。
 
 ## 这个改版做了什么
 
@@ -14,7 +13,7 @@
 - 增加 AI 创意输入、多分镜编辑、识图模型、文本/识图 API 设置、思考开关和真正终止上游输出。
 - 后续分镜改为独立可执行的完整提示词；场景不变时使用稳定的文字锚点，不再写“与上一段相同”。
 - 增加二采条件重建、Sigma 细化、分块采样、二采总开关和二采条件保存。
-- 内置基于官方最新版的命名空间隔离 3D latent 放大节点，保留官方优化和 `force_unload`，并增加 4 / 8 / 12 / 24 / 32 时序分块选项。
+- 内置命名空间隔离的 3D latent 放大节点，可选择 4 / 8 / 12 / 24 帧时序分块；以后更新原插件不会覆盖本节点。
 - 关闭二采时只保存一采视频；开启二采时可同时保存一采和二采用于对比。
 
 ## 安装
@@ -42,10 +41,10 @@ ComfyUI/custom_nodes/gosick_233/prompt_optimizer.json
 
 ## 原项目与致谢
 
-本改版基于：
+感谢以下项目与作者公开分享源码：
 
 - [nkxx188/ComfyUI-MiniMaxH3-Easy](https://github.com/nkxx188/ComfyUI-MiniMaxH3-Easy)
 - [yichengup/ComfyUI-YCNodes-MiniMax-H3](https://github.com/yichengup/ComfyUI-YCNodes-MiniMax-H3)
 - [LBH-123-AI/Comfyui_Minimax_h3_latent_Upscaler](https://github.com/LBH-123-AI/Comfyui_Minimax_h3_latent_Upscaler)
 
-感谢各位原作者在社区公开分享。放大节点的来源和改动记录在 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+3D latent 放大节点的具体改动和原仓库目录记录在 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。

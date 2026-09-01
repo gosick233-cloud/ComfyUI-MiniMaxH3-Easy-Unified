@@ -1,6 +1,6 @@
 [project]
 name = "gosick-233-minimax-h3-nodes"
-description = "Namespaced community modifications combining MiniMaxH3-Easy and YCNodes MiniMax H3."
+description = "Namespaced community modifications for MiniMax H3 workflows."
 version = "1.0.14"
 license = { file = "LICENSE" }
 dependencies = ["requests"]

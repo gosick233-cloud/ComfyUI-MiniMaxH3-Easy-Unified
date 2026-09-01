@@ -39,6 +39,7 @@ for _module_name in (
     "h3_dynamic_cfg_scheduler",
     "h3_sigma_refiner",
     "h3_tiled_sampler",
+    "minimax_h3_latent_upscaler_3d",
 ):
     _module = import_module(f".py.{_module_name}", __name__)
     _overlap = set(NODE_CLASS_MAPPINGS).intersection(_module.NODE_CLASS_MAPPINGS)

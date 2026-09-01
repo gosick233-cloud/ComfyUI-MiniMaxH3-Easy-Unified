@@ -21,6 +21,7 @@ workflows. It is not an official release of either upstream project.
   unavailable previous-video memory; unchanged scenes reuse stable text anchors.
 - Adds second-pass conditioning, Sigma refinement, tiled sampling, an explicit
   second-pass switch, and conditional saving.
+- Includes a namespace-isolated 3D latent upscaler based on the latest upstream code, preserving upstream optimizations and `force_unload` while adding 4 / 8 / 12 / 24 / 32-frame temporal chunk choices.
 - When second pass is off, only the first-pass video is saved. When it is on,
   both first- and second-pass videos can be saved for comparison.
 
@@ -50,12 +51,12 @@ The file contains API keys in plain text and is excluded by `.gitignore`. It is
 not included in this repository. Keep the local file when updating the node to
 avoid entering the settings again.
 
-## Upstream projects and licenses
+## Upstream projects and acknowledgements
 
 This modification is based on:
 
 - [nkxx188/ComfyUI-MiniMaxH3-Easy](https://github.com/nkxx188/ComfyUI-MiniMaxH3-Easy)
 - [yichengup/ComfyUI-YCNodes-MiniMax-H3](https://github.com/yichengup/ComfyUI-YCNodes-MiniMax-H3)
+- [LBH-123-AI/Comfyui_Minimax_h3_latent_Upscaler](https://github.com/LBH-123-AI/Comfyui_Minimax_h3_latent_Upscaler)
 
-Thanks to both original authors for publishing their work. See [LICENSE](LICENSE)
-and [LICENSE-YCNODES](LICENSE-YCNODES) for the retained MIT notices.
+Thanks to the original authors for sharing their work. The latent upscaler source and local changes are recorded in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

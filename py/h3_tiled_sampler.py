@@ -17,6 +17,8 @@ H3 视频模型专属分块采样节点.
 不适用: 重去噪 (从纯噪声起步). 空间分块会破坏全局一致性.
 """
 
+import copy
+
 import torch
 import comfy.sample
 import comfy.utils
@@ -186,6 +188,10 @@ def _compute_tile_starts(total, n_tiles, overlap):
     for i in range(n_tiles):
         start = int(i * stride - overlap)
         start = max(0, start)
+        # MiniMax H3 uses a (1,2,2) video patch.  Keep every spatial tile on
+        # the same 2-token grid so both the sampled latent and cropped
+        # keyframe conditioning can be patchified without padding ambiguity.
+        start -= start % 2
         starts.append(start)
 
     # 去重 (相邻 start 可能因 clamp 到 0 而重合)
@@ -198,6 +204,9 @@ def _compute_tile_starts(total, n_tiles, overlap):
     # tile_size: 最大 tile 的覆盖范围 (含 overlap)
     # 中间 tile: stride + 2*overlap, 边缘 tile: stride + overlap
     tile_size = int(stride) + 2 * overlap + 1  # +1 向上取整安全余量
+    tile_size = ((tile_size + 1) // 2) * 2
+    if total % 2 == 0:
+        tile_size = min(tile_size, total)
 
     return starts, tile_size
 
@@ -222,6 +231,84 @@ def _make_window_1d(length, ov_left, ov_right, dtype, device):
             fade = 0.5 - 0.5 * torch.cos((1 - t) * 3.14159265)
             w[-n:] = torch.minimum(w[-n:], fade)
     return w
+
+
+def _guider_for_spatial_tile(guider, tile_axis, ax_start, ax_end,
+                             source_h, source_w, debug=False):
+    """Clone a guider and crop target-space H3 keyframes to one spatial tile.
+
+    MiniMax H3 keyframe latents are packed into the same video-row layout as
+    the sampled latent.  A spatial tile therefore needs the matching slice of
+    every ``minimax_keyframes[*].latent``; passing the full-canvas keyframe to a
+    tile produces ``all_video_rows`` shape mismatches inside the core model.
+    """
+    original_conds = getattr(guider, "original_conds", None)
+    if not isinstance(original_conds, dict):
+        raise TypeError("H3 spatial tiling requires a guider with original_conds")
+
+    tile_guider = copy.copy(guider)
+    tile_guider.original_conds = {}
+    tile_guider.conds = {}
+    cropped_count = 0
+
+    for cond_key, cond_list in original_conds.items():
+        tile_cond_list = []
+        for cond in cond_list:
+            if not isinstance(cond, dict):
+                tile_cond_list.append(cond)
+                continue
+
+            tile_cond = cond.copy()
+            keyframes = cond.get("minimax_keyframes")
+            if keyframes is not None:
+                tile_keyframes = []
+                for keyframe_index, keyframe in enumerate(keyframes):
+                    if not isinstance(keyframe, dict):
+                        tile_keyframes.append(keyframe)
+                        continue
+
+                    tile_keyframe = keyframe.copy()
+                    keyframe_latent = keyframe.get("latent")
+                    if keyframe_latent is not None:
+                        if not isinstance(keyframe_latent, torch.Tensor) or keyframe_latent.dim() != 5:
+                            raise ValueError(
+                                "H3 keyframe latent must be 5D [B,C,T,H,W], "
+                                f"got {type(keyframe_latent).__name__} "
+                                f"shape={getattr(keyframe_latent, 'shape', None)}"
+                            )
+                        if tuple(keyframe_latent.shape[-2:]) != (source_h, source_w):
+                            raise ValueError(
+                                "H3 second-pass keyframe conditioning does not match the "
+                                "full upscaled latent before tiling: "
+                                f"keyframe {keyframe_index} is "
+                                f"{tuple(keyframe_latent.shape[-2:])}, target is "
+                                f"{(source_h, source_w)}. Rebuild second-pass conditioning "
+                                "from the upscaled video latent first."
+                            )
+
+                        if tile_axis == "H":
+                            keyframe_latent = keyframe_latent[
+                                :, :, :, ax_start:ax_end, :
+                            ]
+                        else:
+                            keyframe_latent = keyframe_latent[
+                                :, :, :, :, ax_start:ax_end
+                            ]
+                        tile_keyframe["latent"] = keyframe_latent.contiguous()
+                        cropped_count += 1
+                    tile_keyframes.append(tile_keyframe)
+                tile_cond["minimax_keyframes"] = tile_keyframes
+            tile_cond_list.append(tile_cond)
+        tile_guider.original_conds[cond_key] = tile_cond_list
+
+    if debug and cropped_count:
+        tile_h = ax_end - ax_start if tile_axis == "H" else source_h
+        tile_w = source_w if tile_axis == "H" else ax_end - ax_start
+        print(
+            f"  · [H3] cropped {cropped_count} keyframe latent(s) "
+            f"for tile conditioning -> {(tile_h, tile_w)}"
+        )
+    return tile_guider
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -435,16 +522,28 @@ class H3TiledSampler:
                 tile_noise = full_noise_video[:, :, :, :, ax_start:ax_end].contiguous()
 
             actual_size = tile_latent.shape[3 if tile_axis == "H" else 4]
+            if tile_latent.shape[-2] % 2 or tile_latent.shape[-1] % 2:
+                raise ValueError(
+                    "H3 spatial tile must align to the (1,2,2) DiT patch grid, "
+                    f"got latent HxW={tuple(tile_latent.shape[-2:])}. "
+                    "Use an even full latent size and patch-aligned tile settings."
+                )
 
             if debug:
                 print(f"  \u00b7 tile {tile_idx+1}/{len(starts)}: "
                       f"range=[{ax_start},{ax_end}) "
                       f"shape={tuple(tile_latent.shape)}")
 
+            # 每个空间 tile 必须使用同范围的关键帧 latent。完整画布的
+            # minimax_keyframes 直接交给 tile 会在 H3 packed rows 阶段形状不匹配。
+            tile_guider = _guider_for_spatial_tile(
+                guider, tile_axis, ax_start, ax_end, H, W, debug
+            )
+
             # 准备 x0 捕获
             x0_output = {}
             callback = latent_preview.prepare_callback(
-                guider.model_patcher, sigmas.shape[-1] - 1, x0_output
+                tile_guider.model_patcher, sigmas.shape[-1] - 1, x0_output
             )
 
             # H3 不能只接收视频 tensor：模型 forward 固定读取 x[0] video 与
@@ -452,7 +551,7 @@ class H3TiledSampler:
             # tile 采样产生的音频结果会被丢弃，最终仍沿用上游原音频 latent。
             tile_av_latent = NestedTensor([tile_latent, audio_for_sample])
             tile_av_noise = NestedTensor([tile_noise, full_noise_audio])
-            tile_result = guider.sample(
+            tile_result = tile_guider.sample(
                 tile_av_noise, tile_av_latent, sampler, sigmas,
                 denoise_mask=None,
                 callback=callback,
@@ -522,7 +621,7 @@ class H3TiledSampler:
                       f"weight_acc min={weights.min().item():.3f}")
 
             # 内存清理
-            del tile_result, tile_av_latent, tile_av_noise
+            del tile_result, tile_av_latent, tile_av_noise, tile_guider
             del tile_samples, tile_latent, tile_noise, window, window_1d
             if device.type == "cuda":
                 torch.cuda.empty_cache()
